@@ -9,7 +9,7 @@ class Node {
 
   @override
   String toString() {
-    return "Node: $name => $latitude => $longitude";
+    return "Node($name, $latitude, $longitude)";
   }
 }
 
@@ -26,19 +26,19 @@ extension IterableExtension<T> on Iterable<T> {
 
 class Graph {
   final List<Node> nodes;
-  final Map<Node, Map<Node, double>> _adjacencyMap;
+  final Map<String, Map<String, double>> _adjacencyMap;
 
   Graph(this.nodes) : _adjacencyMap = {} {
     // Inisialisasi map adjacency untuk setiap node
     for (final node in nodes) {
-      _adjacencyMap[node] = {};
+      _adjacencyMap[node.name] = {};
     }
     // Bangun adjacency map berdasarkan jarak euclidean antar node
     for (final node1 in nodes) {
       for (final node2 in nodes) {
         if (node1 != node2) {
           final distance = calculateDistance(node1, node2);
-          _adjacencyMap[node1]![node2] = distance;
+          _adjacencyMap[node1.name]![node2.name] = distance;
         }
       }
     }
@@ -51,45 +51,52 @@ class Graph {
     return sqrt(dx * dx + dy * dy);
   }
 
-  List<Node> shortestPath(Node startNode) {
-    final Map<Node, double> distances = {};
-    final Map<Node, Node?> previousNodes = {};
+ void shortestPath(Node startNode) {
+    final Map<String, double> distances = {};
+    final Map<String, Node?> previousNodes = {};
     final List<Node> unvisited = List.from(nodes);
 
     // Inisialisasi jarak dari startNode ke setiap node lainnya dengan nilai tak terhingga
     for (final node in nodes) {
-      distances[node] = double.infinity;
+      distances[node.name] = double.infinity;
     }
 
-    distances[startNode] = 0;
+    distances[startNode.name] = 0;
+
 
     while (unvisited.isNotEmpty) {
-      unvisited.sort((a, b) => distances[a]!.compareTo(distances[b]!));
+      unvisited.sort((a, b) => distances[a.name]!.compareTo(distances[b.name]!));
       final currentNode = unvisited.removeAt(0);
 
-      for (final neighbor in _adjacencyMap[currentNode]!.keys) {
+      for (final neighbor in _adjacencyMap[currentNode.name]!.keys) {
         final alt =
-            distances[currentNode]! + _adjacencyMap[currentNode]![neighbor]!;
+            distances[currentNode.name]! + _adjacencyMap[currentNode.name]![neighbor]!;
         if (alt < distances[neighbor]!) {
           distances[neighbor] = alt;
           previousNodes[neighbor] = currentNode;
         }
       }
     }
+    
+    final sortedNodes = distances.entries.toList()
+    ..sort((a, b) => a.value.compareTo(b.value));
 
-    return getPath(previousNodes, startNode);
+  final result = <String, Map<String, dynamic>>{};
+  for (final entry in sortedNodes) {
+    final nodeName = entry.key;
+    final distance = entry.value;
+    final node = nodes.firstWhere((node) => node.name == nodeName);
+    result[nodeName] = {
+      'distance': distance,
+      'latitude': node.latitude,
+      'longitude': node.longitude,
+    };
   }
 
-  List<Node> getPath(Map<Node, Node?> previousNodes, Node startNode) {
-    final List<Node> path = [];
-    Node? currentNode = previousNodes.keys.firstWhereOrNull(
-        (key) => previousNodes[key] == null && key != startNode);
-    while (currentNode != null) {
-      path.add(currentNode);
-      currentNode = previousNodes[currentNode];
-    }
-    return path.reversed.toList();
+  print(result);
+
   }
+
 }
 
 void main() {
@@ -102,10 +109,5 @@ void main() {
   Graph graph = Graph(nodes);
 
   Node startNode = nodes[0];
-  List<Node> shortestPath = graph.shortestPath(startNode);
-
-  print('Shortest Path from ${startNode.name} to other nodes:');
-  for (final node in shortestPath) {
-    print('${node.name}');
-  }
+  graph.shortestPath(startNode);
 }
